@@ -68,7 +68,8 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
         cb.setJSONStoreEnabled(true);
         cb.setIncludeEntitiesEnabled(true);
 
-        query = new Query("hadoop");
+        query = new Query("#hadoop");
+        query.setCount(100);
         // TODO construct query
 
         twitter = new TwitterFactory(cb.build()).getInstance();
@@ -85,43 +86,38 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
 
         final Map<String, String> headers = new HashMap<String, String>();
 
-        logger.debug("Setting up Twitter sample stream using consumer key {} and" +
-                " access token {}", new String[]{consumerKey, accessToken});
 
-        // TODO maybe break per keyword type(geo, keyword)
-        if (keywords.length == 0) {
-            logger.debug("Starting up Twitter sampling...");
-            twitter.search();
-        } else {
-            logger.debug("Starting up Twitter sampling...");
-            twitter.search();
-        }
+
 
         try {
             QueryResult result;
             result = twitter.search(query);
-            List<Status> tweets = result.getTweets();
 
+            super.start();
+
+            List<Status> tweets = result.getTweets();
+            logger.info("RESULTS: " + tweets.size());
             for (Status tweet : tweets) {
                 logger.info("USER: " + tweet.getUser().getScreenName() + "\nTEXT: " + tweet.getText() + "\nAT: " + tweet.getCreatedAt() + "\n");
 
-                headers.put("timestamp", String.valueOf(tweet.getCreatedAt().getTime()));
-                Event event = EventBuilder.withBody(
-                        DataObjectFactory.getRawJSON(tweet).getBytes(), headers);
+                //headers.put("timestamp", String.valueOf(tweet.getCreatedAt().getTime()));
+                //Event event = EventBuilder.withBody(
+                //        DataObjectFactory.getRawJSON(tweet).getBytes(), headers);
 
-                channel.processEvent(event);
+                //channel.processEvent(event);
             }
             logger.info("Got " + tweets.size() + " tweets, kudos!");
 
 
         } catch (TwitterException te) {
-            te.printStackTrace();
             logger.error("Failed to search tweets: " + te.getMessage());
+            this.stop();
 
         }
 
-        // TODO it hangs ;(
-        //super.start();
+        // Ended
+        this.stop();
+
     }
 
     /**
