@@ -93,20 +93,21 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
             QueryResult result;
             result = twitter.search(query);
 
-            super.start();
+
 
             List<Status> tweets = result.getTweets();
-            logger.info("RESULTS: " + tweets.size());
             for (Status tweet : tweets) {
                 logger.info("USER: " + tweet.getUser().getScreenName() + "\nTEXT: " + tweet.getText() + "\nAT: " + tweet.getCreatedAt() + "\n");
 
-                //headers.put("timestamp", String.valueOf(tweet.getCreatedAt().getTime()));
-                //Event event = EventBuilder.withBody(
-                //        DataObjectFactory.getRawJSON(tweet).getBytes(), headers);
+                headers.put("timestamp", String.valueOf(tweet.getCreatedAt().getTime()));
+                Event event = EventBuilder.withBody(
+                        DataObjectFactory.getRawJSON(tweet).getBytes(), headers);
 
-                //channel.processEvent(event);
+                channel.processEvent(event);
+
             }
             logger.info("Got " + tweets.size() + " tweets, kudos!");
+            channel.close();
 
 
         } catch (TwitterException te) {
@@ -115,8 +116,7 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
 
         }
 
-        // Ended
-        this.stop();
+        super.start();
 
     }
 
