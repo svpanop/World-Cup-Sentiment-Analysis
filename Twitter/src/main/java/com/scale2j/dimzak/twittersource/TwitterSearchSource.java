@@ -69,7 +69,7 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
         cb.setJSONStoreEnabled(true);
         cb.setIncludeEntitiesEnabled(true);
 
-        query = new Query("#hadoop");
+        query = new Query("obama");
         query.setCount(100);
         // TODO construct query
 
@@ -85,7 +85,7 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
         // and is used to process events.
 
 
-        int wantedTweets = 2000;
+        int wantedTweets = 15000;
         long lastSearchID = Long.MAX_VALUE;
         int remainingTweets = wantedTweets;
 
@@ -93,34 +93,34 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
 
         //ArrayList<Status> tweets = new ArrayList<Status>();
         while (remainingTweets > 0) {
-            logger.info("inside while");
             remainingTweets = wantedTweets - counter;
             if (remainingTweets > 100) {
                 query.count(100);
             } else {
                 query.count(remainingTweets);
             }
-            logger.info("query: " + query.getCount());
+            logger.info("querying for: " + query.getCount() + " results");
 
 
             try {
-                logger.info("gogogo");
+                logger.info("Searching Twitter...");
                 QueryResult result = twitter.search(query);
-                logger.info("lala");
                 logger.info("GOT " + result.getTweets().size());
                 counter = counter + result.getTweets().size();
-                logger.info("counter: " + counter);
+                logger.info("Twitter counter: " + counter);
                 List<Status> tweets = result.getTweets();
-                logger.info("SIZE SO FAR" + tweets.size());
                 Status s = tweets.get(tweets.size() - 1);
                 lastSearchID = s.getId();
                 query.setMaxId(lastSearchID);
-                logger.info("New query: " + query.getCount());
                 remainingTweets = wantedTweets - counter;
                 logger.info("remaining: " + remainingTweets);
 
             } catch (TwitterException te) {
                 logger.info("Couldn't connect: " + te);
+            } catch (ArrayIndexOutOfBoundsException aioob) {
+                logger.info("Couldn't retrieve more tweets...");
+                logger.info("Retrieved " + counter + " tweets so far");
+                break;
             }
 
         }
