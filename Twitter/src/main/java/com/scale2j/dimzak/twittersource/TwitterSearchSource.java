@@ -13,6 +13,7 @@ import twitter4j.*;
 import twitter4j.conf.ConfigurationBuilder;
 import twitter4j.json.DataObjectFactory;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -82,41 +83,49 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
     public void start() {
         // The channel is the piece of Flume that sits between the Source and Sink,
         // and is used to process events.
-        final ChannelProcessor channel = getChannelProcessor();
-
-        final Map<String, String> headers = new HashMap<String, String>();
 
 
+        int wantedTweets = 2000;
+        long lastSearchID = Long.MAX_VALUE;
+        int remainingTweets = wantedTweets;
 
+        int counter = 0;
 
-        try {
-            QueryResult result;
-            result = twitter.search(query);
-
-
-
-            List<Status> tweets = result.getTweets();
-            for (Status tweet : tweets) {
-                logger.info("USER: " + tweet.getUser().getScreenName() + "\nTEXT: " + tweet.getText() + "\nAT: " + tweet.getCreatedAt() + "\n");
-
-                headers.put("timestamp", String.valueOf(tweet.getCreatedAt().getTime()));
-                Event event = EventBuilder.withBody(
-                        DataObjectFactory.getRawJSON(tweet).getBytes(), headers);
-
-                channel.processEvent(event);
-
+        //ArrayList<Status> tweets = new ArrayList<Status>();
+        while (remainingTweets > 0) {
+            logger.info("inside while");
+            remainingTweets = wantedTweets - counter;
+            if (remainingTweets > 100) {
+                query.count(100);
+            } else {
+                query.count(remainingTweets);
             }
-            logger.info("Got " + tweets.size() + " tweets, kudos!");
-            channel.close();
+            logger.info("query: " + query.getCount());
 
 
-        } catch (TwitterException te) {
-            logger.error("Failed to search tweets: " + te.getMessage());
-            this.stop();
+            try {
+                logger.info("gogogo");
+                QueryResult result = twitter.search(query);
+                logger.info("lala");
+                logger.info("GOT " + result.getTweets().size());
+                counter = counter + result.getTweets().size();
+                logger.info("counter: " + counter);
+                List<Status> tweets = result.getTweets();
+                logger.info("SIZE SO FAR" + tweets.size());
+                Status s = tweets.get(tweets.size() - 1);
+                lastSearchID = s.getId();
+                query.setMaxId(lastSearchID);
+                logger.info("New query: " + query.getCount());
+                remainingTweets = wantedTweets - counter;
+                logger.info("remaining: " + remainingTweets);
+
+            } catch (TwitterException te) {
+                logger.info("Couldn't connect: " + te);
+            }
 
         }
 
-        super.start();
+        logger.info("SIZE " + counter);
 
     }
 
@@ -128,5 +137,28 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
         logger.info("Shutting down Twitter...");
         twitter.shutdown();
         super.stop();
+    }
+
+    /**
+     * Create events based on a List<{@link twitter4j.Status}>
+     */
+    private void createEventsFromTweets(List<Status> tweets) {
+
+        final ChannelProcessor channel = getChannelProcessor();
+
+        Map<String, String> headers = new HashMap<String, String>();
+
+        for (Status tweet : tweets) {
+            logger.info("USER: " + tweet.getUser().getScreenName() + "\nTEXT: " + tweet.getText() + "\nAT: " + tweet.getCreatedAt() + "\n");
+
+            headers.put("timestamp", String.valueOf(tweet.getCreatedAt().getTime()));
+            Event event = EventBuilder.withBody(
+                    DataObjectFactory.getRawJSON(tweet).getBytes(), headers);
+
+            channel.processEvent(event);
+
+        }
+        logger.info("Got " + tweets.size() + " tweets, kudos!");
+
     }
 }
