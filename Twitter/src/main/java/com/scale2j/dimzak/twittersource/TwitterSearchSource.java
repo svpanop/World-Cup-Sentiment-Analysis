@@ -84,6 +84,8 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
         // The channel is the piece of Flume that sits between the Source and Sink,
         // and is used to process events.
 
+        super.start();
+
 
         int wantedTweets = 15000;
         long lastSearchID = Long.MAX_VALUE;
@@ -106,10 +108,16 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
                 logger.info("Searching Twitter...");
                 QueryResult result = twitter.search(query);
                 logger.info("GOT " + result.getTweets().size());
+
                 counter = counter + result.getTweets().size();
                 logger.info("Twitter counter: " + counter);
+
                 List<Status> tweets = result.getTweets();
                 Status s = tweets.get(tweets.size() - 1);
+
+                // Process tweets
+                createEventsFromTweets(tweets);
+
                 lastSearchID = s.getId();
                 query.setMaxId(lastSearchID);
                 remainingTweets = wantedTweets - counter;
@@ -158,7 +166,6 @@ public class TwitterSearchSource extends AbstractSource implements EventDrivenSo
             channel.processEvent(event);
 
         }
-        logger.info("Got " + tweets.size() + " tweets, kudos!");
 
     }
 }
