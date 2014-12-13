@@ -32,9 +32,11 @@ Maven for building Flume sources.
 
 
 	
- - **Mess with flume configuration file**
+ - **Mess with flume configuration file:** 
+ 
 	 Flume configuration file for downloading Tweets is in `/Twitter` folder.
-	 Update values and upload in  HDP node. 
+	 Update values and upload in  HDP node.
+	 
 	 An easy location is `/usr/lib/flume/conf`
 
 
